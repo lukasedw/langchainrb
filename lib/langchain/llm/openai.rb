@@ -154,6 +154,23 @@ module Langchain::LLM
       complete(prompt: prompt, temperature: @defaults[:temperature])
     end
 
+    # This method processes the response from an API call.
+    # It attempts to extract the message from the response.
+    # If the message cannot be found, it raises an error.
+    #
+    # @param response [Hash] The response from the API call
+    # @return [String] The message extracted from the response
+    # @raise [Langchain::LLM::ApiError] If the message cannot be found in the response
+    def process_response(response)
+      message = response.dig("choices", 0, "message")
+
+      if message.nil?
+        raise Langchain::LLM::ApiError.new("Chat response failed: no message found")
+      end
+
+      message
+    end
+
     private
 
     def compose_parameters(model, params)
@@ -167,9 +184,9 @@ module Langchain::LLM
     def compose_chat_messages(prompt:, messages:, context:, examples:)
       history = []
 
-      history.concat transform_messages(examples) unless examples.empty?
+      history.concat examples unless examples.empty?
 
-      history.concat transform_messages(messages) unless messages.empty?
+      history.concat messages unless messages.empty?
 
       unless context.nil? || context.empty?
         history.reject! { |message| message[:role] == "system" }
@@ -185,18 +202,6 @@ module Langchain::LLM
       end
 
       history
-    end
-
-    def transform_messages(messages)
-      messages.map do |message|
-        role = message[:role] || message["role"]
-        content = message[:content] || message["content"]
-
-        {
-          content: content,
-          role: (role == "ai") ? "assistant" : role
-        }
-      end
     end
 
     def validate_max_tokens(messages, model)

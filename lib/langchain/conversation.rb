@@ -17,7 +17,7 @@ module Langchain
   #     end
   #
   class Conversation
-    attr_reader :options
+    attr_reader :options, :memory
 
     # Intialize Conversation with a LLM
     #
@@ -59,8 +59,19 @@ module Langchain
     # @return [String] The response from the model
     def message(message)
       @memory.append_user_message(message)
-      response = llm_response(message)
-      @memory.append_ai_message(response)
+      response = llm_response
+      @memory.append_ai_message(@llm.process_response(response))
+      response
+    end
+
+    # Message the model with the function name, content and return the response.
+    # @param name [String] The name of the function to be called
+    # @param content [String] The content or arguments for the function call
+    # @return [String] The response from the function call
+    def function(name, content)
+      @memory.append_function_message(name, content)
+      response = llm_response
+      @memory.append_ai_message(@llm.process_response(response))
       response
     end
 
@@ -84,7 +95,7 @@ module Langchain
 
     private
 
-    def llm_response(prompt)
+    def llm_response
       @llm.chat(messages: @memory.messages, context: @memory.context, examples: @memory.examples, **@options, &@block)
     rescue Langchain::Utils::TokenLength::TokenLimitExceeded => exception
       @memory.reduce_messages(exception)

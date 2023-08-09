@@ -26,11 +26,19 @@ module Langchain
     end
 
     def append_ai_message(message)
-      @messages << {role: "ai", content: message}
+      @messages << {role: "assistant", content: message}
     end
 
     def append_user_message(message)
       @messages << {role: "user", content: message}
+    end
+
+    def append_system_message(message)
+      @messages << {role: "system", content: message}
+    end
+
+    def append_function_message(name, message)
+      @messages << {role: "function", name: name, content: message}
     end
 
     def reduce_messages(exception)
